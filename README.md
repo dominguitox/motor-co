@@ -3,7 +3,7 @@
 Motor de modelos y flujos: el usuario define campos y reglas sin tocar código.
 
 Producción: `https://motor.jorgelio.cl` (DirectAdmin, PHP/MySQL).
-Estado: en construcción. La API responde `GET /api/health`; el frontend llega en el PR #2.
+Estado: en construcción. La API responde `GET /api/health` y el frontend muestra el estado de conexión.
 
 ## Qué es
 
@@ -67,13 +67,16 @@ curl http://127.0.0.1:8001/api/health
 La API usa el puerto **8001** porque en el equipo de desarrollo el 8000 lo ocupa Docker Desktop.
 Si en tu máquina está libre, cambia el puerto en `package.json`, `.env` y el proxy de Vite.
 
-### Frontend (PR #2)
+### Frontend
 
 ```bash
 npm install
-npm run dev:web            # Vite con proxy /api -> 127.0.0.1:8001
-npm run build              # salida estática
+npm run dev:web            # http://localhost:5173
+npm run build              # salida estática en apps/web/dist
 ```
+
+El frontend consulta `/api/health` a través del proxy de Vite (`/api` → `127.0.0.1:8001`) y muestra
+tres estados: cargando, API conectada y error.
 
 ## Comandos
 
@@ -111,7 +114,7 @@ docker-compose.yml MySQL 8.4 local
 - [x] Repo, monorepo y Laravel API-only
 - [x] `GET /api/health` + test Pest
 - [x] MySQL local en Docker (3307) y CI con MySQL
-- [ ] Frontend React con estado de conexión (PR #2)
+- [x] Frontend React con estado de conexión (3 tests de componente)
 - [ ] Auth y modelos
 - [ ] Registros y CRUD generado
 - [ ] Motor de flujos

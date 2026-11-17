@@ -68,17 +68,29 @@ jobs:
       - name: Run tests
         run: php artisan test
 
-  # El job de web se activa en el PR #2, cuando exista apps/web con Vite.
-  # web:
-  #   name: Web (Node)
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-node@v4
-  #       with:
-  #         node-version: 24
-  #         cache: npm
-  #     - run: npm ci
-  #     - run: npm run typecheck
-  #     - run: npx vitest run
-  #     - run: npm run build
+  web:
+    name: Web (Node)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check code style
+        run: npm run lint --workspace @motor-co/web
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Run tests
+        run: npm run test:web
+
+      - name: Build
+        run: npm run build
