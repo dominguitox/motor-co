@@ -2,7 +2,7 @@
 
 Motor de modelos y flujos: el usuario define campos y reglas sin tocar código.
 
-Producción: `https://motor.jorgelio.cl` (DirectAdmin, PHP/MySQL).
+Destino planificado: `https://motor.jorgelio.cl` (sin desplegar aún).
 Estado: en construcción. La API responde `GET /api/health` y el frontend muestra el estado de conexión.
 
 ## Qué es
@@ -97,7 +97,7 @@ cd apps/api && php vendor/bin/pint --test
 ```
 apps/api         Laravel: API JSON, migraciones, seed y tests Pest
 apps/web         React + Vite (workspace npm)
-apps/e2e         Playwright (workspace npm)
+apps/e2e         Playwright (pendiente; workspace npm)
 docs             openapi.yaml, decisiones (ADR), arquitectura
 .github/workflows  CI
 docker-compose.yml MySQL 8.4 local
