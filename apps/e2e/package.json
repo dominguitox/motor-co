@@ -1,0 +1,6 @@
+{
+  "name": "@motor-co/e2e",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pruebas E2E con Playwright (pendiente)"
+}

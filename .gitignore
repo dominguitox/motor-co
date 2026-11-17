@@ -1,20 +1,31 @@
-# Dependencias
+# Dependencias JS
 node_modules/
-.pnpm-store/
 
-# Build
+# Build frontend
 dist/
 build/
 *.tsbuildinfo
+
+# Laravel / PHP
+/apps/api/vendor/
+/apps/api/bootstrap/cache/*.php
+/apps/api/storage/*.key
+/apps/api/storage/logs/*.log
+/apps/api/public/build/
+/apps/api/public/hot
+.phpunit.cache/
+.phpunit.result.cache
 
 # Entorno y secretos
 .env
 .env.*
 !.env.example
 
-# Base de datos / Prisma
+# Base de datos / dumps
+*.sql
+*.sql.gz
 *.db
-*.db-journal
+*.sqlite
 
 # Tests y cobertura
 coverage/
@@ -25,8 +36,6 @@ blob-report/
 
 # Logs
 *.log
-npm-debug.log*
-pnpm-debug.log*
 
 # Editores y sistema
 .vscode/*

@@ -1,16 +1,18 @@
-# AGENTS.md — Motor de modelos y flujos
+# AGENTS.md — motor-co
 
 Instrucciones para agentes de IA que trabajen en este repositorio. El plan completo está en
-[`plan-motor-modelos-flujos.md`](./plan-motor-modelos-flujos.md); este archivo es el resumen operativo
-y las reglas que **no** se negocian.
+[`plan-motor-modelos-flujos.md`](./plan-motor-modelos-flujos.md) y la decisión de stack vigente en
+[`docs/decisions/001-ruta-a.md`](./docs/decisions/001-ruta-a.md). Este archivo es la fuente de verdad
+operativa; si contradice al plan, gana este archivo y se corrige el plan.
 
 ## 1. Qué es este proyecto
 
-**Nombre: `motor-co`.** Repo: `motor-co`.
+**Nombre: `motor-co`.** Repo: `https://github.com/dominguitox/motor-co`.
+Producción: `https://motor.jorgelio.cl` (DirectAdmin, PHP/MySQL).
 
-Un motor no-code mínimo: el usuario define **modelos** (campos), carga **registros** y define **flujos**
-lineales que se disparan con eventos. Es una pieza de portafolio para conseguir un puesto **junior** en
-una agencia en Chile.
+Un motor no-code mínimo: el usuario define **modelos** (campos), carga **registros** con un CRUD
+generado y define **flujos** lineales que se disparan con eventos. Es una pieza de portafolio para
+conseguir un puesto **junior** en una agencia en Chile.
 
 Consecuencia práctica: **el proyecto es un medio, no un fin.** Su éxito se mide en entrevistas, no en
 usuarios. Se valora más un repo pequeño, terminado, con tests, CI y deploy, que una app ambiciosa a medias.
@@ -18,31 +20,40 @@ usuarios. Se valora más un repo pequeño, terminado, con tests, CI y deploy, qu
 - Sin registro de usuarios: solo login con una cuenta demo sembrada.
 - Un único espacio de trabajo. Sin multi-tenant, sin roles, sin cobro.
 - Fecha de congelamiento: **día 30**. Lo que no esté, no existe.
-- Código congelado en el alcance de la sección 3. Si una idea no está ahí, **preguntar antes de implementarla**.
+- Si una idea no está en la sección 3, **preguntar antes de implementarla**.
 
-## 2. Stack (cerrado)
+## 2. Stack (cerrado) — Ruta A
+
+El hosting del autor es **DirectAdmin con PHP y MySQL y no ejecuta procesos fuera de PHP**.
+Por eso la app es React (estático) + Laravel (API y mismo origen), y no un servidor de aplicación propio.
+Es además el stack que usan las agencias chilenas.
 
 | Capa | Elección |
 |---|---|
-| Monorepo | pnpm workspaces |
-| Web | React 19 + TypeScript + Vite |
+| Frontend | React 19 + TypeScript estricto + Vite |
+| Estilos | Tailwind CSS 4 (`@tailwindcss/vite`) |
 | Datos remotos | TanStack Query |
-| Formularios | React Hook Form + Zod |
-| Estilos | Tailwind CSS 4 |
-| API | Node 22 + TypeScript + Fastify |
-| Validación | Zod en `packages/shared` (fuente única cliente/servidor) |
-| ORM / DB | Prisma + PostgreSQL (JSONB) |
-| Auth | Cookie de sesión HttpOnly + hash de password (argon2 o bcrypt) |
-| Tests | Vitest + Supertest (integración) + Playwright (E2E) |
-| CI | GitHub Actions con servicio Postgres |
-| Deploy | Web en Vercel, API en Fly.io (Dockerfile), DB en Neon |
+| Formularios | React Hook Form + Zod (solo frontend) |
+| Router | React Router (solo cuando exista una segunda vista) |
+| API | Laravel (solo API, `routes/api.php`; sin Blade para la app) |
+| Auth | Laravel Sanctum |
+| Base de datos | MySQL 8 (Docker local en `3307`; DirectAdmin en producción) |
+| Registros | columna JSON de MySQL, validación en la capa de aplicación |
+| Contrato | `docs/openapi.yaml` a mano + tipos TS con `openapi-typescript` |
+| Tests API | Pest |
+| Tests front | Vitest + Testing Library |
+| E2E | Playwright |
+| Monorepo | npm workspaces solo para JS (`apps/web`, `apps/e2e`); Laravel vive aparte en `apps/api` |
+| CI | GitHub Actions: un job PHP+MySQL y un job JavaScript |
+| Deploy | Front compilado dentro de Laravel, mismo origen; DirectAdmin |
 
-**Prohibido instalar sin justificación explícita en el PR:** Nx, Turborepo, NestJS, tRPC, Sentry,
-feature flags, Prisma Accelerate, Docker Compose con múltiples servicios, librerías de UI o de
-drag-and-drop, generadores de formularios, ORMs alternativos.
+**Prohibido instalar sin justificarlo en el PR y pedir permiso:** Nx, Turborepo, NestJS, tRPC,
+Docker Compose con múltiples servicios, librerías de UI, de drag-and-drop o generadores de formularios,
+cualquier ORM distinto de Eloquent, cualquier servidor de aplicación alternativo. El stack anterior
+(descrito en el ADR 001) **no está vigente**: no se instala nada de él.
 
-Antes de agregar cualquier dependencia: verificar que no exista ya una forma simple de hacerlo con lo
-que está en el stack, y dejarlo escrito en el PR.
+**No usar `pnpm`** (no está instalado). Se usa **npm**. **No usar `gh`, `flyctl` ni `vercel`** (tampoco
+están instalados).
 
 ## 3. Alcance congelado
 
@@ -52,13 +63,13 @@ que está en el stack, y dejarlo escrito en el PR.
 - Constructor de modelos: nombre + campos.
 - 5 tipos de campo: `text`, `number`, `date`, `boolean`, `reference`.
 - CRUD generado por modelo: lista, búsqueda, filtro, orden, paginación, crear, editar, borrar.
-- Formulario generado desde la definición, con validación compartida con el backend.
+- Formulario generado desde la definición, con validación compartida (Zod en el front, FormRequest en la API).
 - Referencias simples entre modelos (selector, nunca texto libre).
 - Flujos lineales: trigger `manual` o `on_create`; precondición única `campo operador valor`
   (`=`, `!=`, `>`, `<`, `>=`, `<=`, `contains`); pasos `update_field` y `create_record`.
 - Historial de ejecuciones: estado, fecha, error legible.
-- Docker para la API, CI con Postgres real y deploy automático desde `main`.
-- MCP con 4 herramientas (opcional, día 26).
+- CI con MySQL real y deploy automático a DirectAdmin.
+- MCP con 4 herramientas (opcional, día 26, pieza separada; ver plan).
 
 ### No entra (no implementar aunque parezca fácil)
 
@@ -74,51 +85,65 @@ de apps con IA. Tiempo real, websockets, notificaciones.
 ```
 motor-co/
   apps/
-    web/  src/{pages,components,lib}
-    api/  src/{routes,services,lib,plugins}, prisma/, test/
-    e2e/
-  packages/
-    shared/  src/{fieldTypes.ts,recordSchema.ts,flowDsl.ts}
-  docs/  decisions/, architecture.md
+    api/            Laravel: app/, routes/api.php, database/, tests/
+    web/            React + Vite (workspace npm)
+    e2e/            Playwright (workspace npm)
+  docs/
+    openapi.yaml    contrato escrito a mano
+    decisions/      ADR cortos
+    architecture.md
   .github/workflows/
+  docker-compose.yml  solo mysql:8.4
 ```
 
-### Tres límites que no se cruzan
+### Límites que no se cruzan
 
-1. `flowEngine` **no conoce HTTP**. Recibe datos, devuelve resultado. Nada de `req`/`reply`.
-2. Las **rutas no contienen lógica de negocio**: validan, llaman a un servicio y responden.
-3. `packages/shared` **no importa Prisma ni React**. Solo tipos, esquemas Zod y lógica pura.
+1. El **motor de flujos** vive en un servicio de Laravel (`app/Services/FlowEngine`) y **no conoce HTTP**:
+   no recibe `Request`, no devuelve `Response`, no usa `$request->...`. Recibe datos tipados y devuelve un
+   resultado.
+2. Las **rutas y controladores no contienen lógica de negocio**: validan con FormRequest, delegan en un
+   servicio y responden un recurso/JSON.
+3. El frontend **no conoce la base de datos**: solo consume `docs/openapi.yaml` a través de tipos generados.
+4. Sin Blade para la app: Laravel solo sirve JSON y, en producción, el `index.html` compilado.
 
-Si una tarea requiere romper uno de estos límites, es señal de que el diseño está mal planteado:
-parar y proponer una alternativa.
+Si una tarea requiere romper uno de estos límites, parar y proponer una alternativa.
 
 ## 5. Comandos
 
 ```bash
-pnpm install                      # instalar todo el monorepo
-pnpm dev                          # web + api en desarrollo
-pnpm lint
-pnpm typecheck
-pnpm test                         # Vitest (unidad + integración)
-pnpm test -- --coverage
-pnpm --filter api prisma migrate dev
-pnpm --filter api prisma migrate deploy
-pnpm --filter api prisma db seed
-pnpm build
-pnpm exec playwright test
+# raíz
+npm install
+npm run dev:web            # Vite (proxy /api -> 127.0.0.1:8000)
+npm run dev:api            # php artisan serve
+npm run lint               # pint --test + eslint
+npm run typecheck          # tsc --noEmit
+npm test                   # pest + vitest
+npm run build              # build del front
+
+# base de datos
+docker compose up -d
+docker compose ps
+
+# API (desde apps/api)
+composer install
+php artisan migrate
+php artisan db:seed
+php artisan test           # pest
+./vendor/bin/pint --test
 ```
 
-Regla: **no se declara una tarea terminada sin `lint`, `typecheck`, `test` y `build` en verde.**
+Regla: **no se declara una tarea terminada sin lint, typecheck, test y build en verde** (en la API:
+`pint --test` y `php artisan test`).
 
 ## 6. Dominio y decisiones técnicas
 
-### Registros en JSONB
+### Registros en columna JSON
 
-Los registros viven en `Record.data` (JSONB); las definiciones en `Field`. **No** se crean tablas reales
-por modelo.
+Los registros viven en `records.data` (JSON de MySQL); las definiciones en `fields`. **No** se crean
+tablas reales por modelo ni DDL dinámico.
 
-- Toda la validación está en la capa de aplicación, con **Zod generado desde `Field[]`**.
-- La base no tiene constraints por campo. No agregarlos con DDL dinámico.
+- Validación en la capa de aplicación: **FormRequest generado desde `Field[]`** en Laravel y **Zod
+  generado desde `Field[]`** en el frontend. No hay constraints por campo en la base.
 - Al tocar consultas de registros, respetar la paginación `{ items, page, size, total }`.
 
 ### Motor de flujos
@@ -126,16 +151,16 @@ por modelo.
 Semántica del ejecutor (no cambiar sin discutirlo):
 
 1. Flujo deshabilitado → no corre.
-2. Precondición falsa → `FlowRun.status = skipped` (no `failed`).
-3. Pasos en orden dentro de **una transacción**.
+2. Precondición falsa → `flow_runs.status = skipped` (no `failed`).
+3. Pasos en orden dentro de **una transacción** (`DB::transaction`).
 4. Cualquier paso que falla → rollback completo, `status = failed`, guardar paso y error legible.
 5. Éxito → commit, `status = success`, detalle por paso.
-6. `on_create` corre **después** de crear el registro y usa `idempotency = "create:<recordId>:<flowId>"`
-   para no duplicar efectos.
+6. `on_create` corre **después** de crear el registro y usa
+   `idempotency_key = "create:<recordId>:<flowId>"` (unique) para no duplicar efectos.
 7. Sin reintentos automáticos. Sin recursión: un flujo no llama a otro flujo.
 
-**El DSL se interpreta, nunca se ejecuta como código.** Prohibido `eval`, `new Function`, expresiones
-del usuario o plugins. Cualquier propuesta que requiera ejecutar código del usuario se rechaza.
+**El DSL se interpreta, nunca se ejecuta como código.** Prohibido `eval`, `Function`, expresiones del
+usuario o plugins. Cualquier propuesta que requiera ejecutar código del usuario se rechaza.
 
 ### Referencias
 
@@ -143,20 +168,24 @@ Borrar un registro referenciado **no** hace cascada en la V1: se rechaza con `40
 
 ## 7. Contrato de API y convenciones
 
+- **El contrato se escribe primero en `docs/openapi.yaml`**, a mano. Los tipos TS se generan con
+  `openapi-typescript`; no se editan a mano.
 - Errores: `{ error: { code, message, details? } }`. **Nunca** stack traces al cliente.
 - Validación fallida: `422` con detalle por campo.
-- Auth: middleware global; `401` sin sesión, `403` en recurso ajeno.
+- Auth: Sanctum; `401` sin sesión, `403` en recurso ajeno.
 - Paginación: `{ items, page, size, total }`.
-- Rutas bajo `/auth`, `/models`, `/models/:id/fields`, `/models/:id/records`, `/records/:id`,
-  `/models/:id/flows`, `/flows/:id`, `/flows/:id/run`, `/flows/:id/runs`, `/runs/:id`.
+- Rutas bajo `/api`: `/auth/login`, `/auth/logout`, `/auth/me`, `/models`, `/models/:id/fields`,
+  `/models/:id/records`, `/records/:id`, `/models/:id/flows`, `/flows/:id`, `/flows/:id/run`,
+  `/flows/:id/runs`, `/runs/:id`.
 - Nombres de archivos y carpetas en inglés; textos de UI en español.
 
 ## 8. Tests
 
 | Capa | Herramienta | Qué cubre | Meta |
 |---|---|---|---|
-| Unidad | Vitest | `recordSchema` desde `Field[]`, `conditionEvaluator`, transiciones del motor | 15–20 |
-| Integración | Vitest + Supertest + Postgres real | Auth, permisos, validación, CRUD, referencias, ejecución de flujo | 15–20 |
+| Unidad API | Pest | generación de reglas desde `Field[]`, evaluador de condiciones, motor de flujos | 15–20 |
+| Integración API | Pest + MySQL real | Auth, permisos, validación, CRUD, referencias, ejecución de flujo | 15–20 |
+| Front | Vitest + Testing Library | estados de la UI, formulario dinámico, tabla | 8–12 |
 | E2E | Playwright | login → modelo → registro → flujo → historial; validación de formulario | 2 |
 
 Casos obligatorios (tienen valor real, no rellenar con tests triviales):
@@ -184,17 +213,19 @@ en la descripción. No mezclar refactors oportunistas con features.
 ## 10. Reglas para agentes
 
 1. **No inventar alcance.** Si la tarea no está en la sección 3, preguntar antes de escribir código.
-2. **No romper los tres límites** de la sección 4.
-3. **No agregar dependencias** sin justificarlo y avisar.
+2. **No romper los límites** de la sección 4, especialmente el motor de flujos sin HTTP.
+3. **No agregar dependencias** sin justificarlo y avisar. Nada de `pnpm`, `gh`, `flyctl` ni `vercel`.
 4. **No ejecutar código del usuario** (DSL) ni introducir `eval`/`Function`.
-5. **No copiar la estructura de Congelandia** ni de otros proyectos Laravel del usuario: el motor se
-   diseña desde cero. Si se hereda estructura, se hereda deuda y se pierde el relato de autoría.
+5. **No copiar la estructura de Congelandia** ni de otros proyectos del usuario: motor-co se diseña
+   desde cero. Si se hereda estructura, se hereda deuda y se pierde el relato de autoría.
 6. **No generar archivos innecesarios** (índices de barriles, capas vacías, abstracciones de un solo uso).
    Preferir código explícito y legible a "arquitectura" decorativa.
 7. **No dejar TODOs silenciosos.** Si algo queda pendiente, se documenta en el PR o en un issue.
-8. **No tocar el portafolio ni los otros repos** desde este proyecto (son tareas separadas, días 28–29).
+8. **No tocar** `C:\Proyectos\Congelandia`, `C:\Proyectos\app-ventas-base` ni
+   `C:\Proyectos\Herd\jorgelio-portafolio`.
 9. Documentar decisiones con impacto en `docs/decisions/NNN-titulo.md` (formato ADR corto).
-10. El código debe poder explicarse en voz alta por el autor. Si el agente escribe algo que el autor no
+10. **Nunca commitear `.env`, credenciales ni dumps.** Solo `.env.example`.
+11. El código debe poder explicarse en voz alta por el autor. Si el agente escribe algo que el autor no
     puede defender en una entrevista, el agente falló.
 
 ## 11. Escalera de cortes (si falta tiempo)
